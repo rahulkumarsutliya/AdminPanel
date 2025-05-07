@@ -9,6 +9,11 @@ exports.registerUser = async(req,resp)=>{
 
   const { name,email,password} = req.body;
   try{
+
+    if(!name || !email || !password){
+      return resp.status(400).send({message: "Fields cannot be empty"});
+    }
+
     let user = await User.findOne({ email});
     if(user) return resp.status(400).send({message:"Email already exists"});
 
@@ -29,15 +34,20 @@ exports.registerUser = async(req,resp)=>{
     
     resp.status(201).send({message:"User Registered . OTP sent to email."});
   }catch(err){
-    resp.status(500).send({message:"Error registering User",errror:err.message});
+    resp.status(500).send({message:"Error registering User",error:err.message});
   }
 };
+
 
 
 //Verify Otp
 
 exports.verifyOtp = async(req,resp)=>{
   const { email,otp} = req.body;
+
+  if(!email || !otp){
+    return resp.status(400).send({message: "Fiels cannot be empty"});
+  }
 
   const user = await User.findOne({ email });
 
@@ -64,6 +74,11 @@ exports.resendOtp = async(req,resp)=>{
   const { email } = req.body;
   
   try{
+
+    if(!email){
+      return resp.status(400).send({message: "Field cannot be empty"});
+    }
+
     const user = await User.findOne({email});
 
     if(!user){
@@ -99,6 +114,11 @@ exports.loginUser = async(req,resp)=>{
   const {email,password} = req.body;
 
   try{
+
+    if(!email || !password){
+      return resp.status(400).send({message: "Fields cannot be empty"});
+    }
+
     const user = await User.findOne({ email });
 
     if(!user) {
@@ -116,7 +136,8 @@ exports.loginUser = async(req,resp)=>{
     }
 
     const token = jwt.sign(
-      {userID : user._id},
+      {id: user._id,
+       role: user.role},
       process.env.JWT_SECRET,
       {expiresIn : process.env.JWT_EXPIRE}
     );
@@ -126,6 +147,7 @@ exports.loginUser = async(req,resp)=>{
       token,
       user :{
         id:user._id,
+        role:user.role,
         name: user.name,
         email : user.email,
       },
@@ -144,6 +166,11 @@ exports.forgotPassword = async(req,resp)=>{
   const {email} = req.body;
 
   try{
+
+    if(!email){
+      resp.status(400).send({message: "Field cannot be empty"});
+    }
+
     const user = await User.findOne({email});
 
     if(!user){
@@ -153,7 +180,7 @@ exports.forgotPassword = async(req,resp)=>{
    
     const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = Date.now() + 5 * 60 * 1000;
-
+  
     user.otp = resetOtp;
     user.otpExpires = otpExpires;
     await user.save();
@@ -172,9 +199,13 @@ exports.forgotPassword = async(req,resp)=>{
 //reset password
 
 exports.resetPassword = async(req,resp)=>{
-  const{ email,otp,newpassword } = req.body;
+  const{ email,otp,newPassword } = req.body;
 
   try{
+
+    if(!email || !otp || !newPassword){
+      return resp.status(400).send({message: "Fields cannot be empty"});
+    }
 
     const user = await User.findOne({ email });
 
@@ -182,7 +213,7 @@ exports.resetPassword = async(req,resp)=>{
       return resp.status(400).send({message: "Invalid or Expired Otp"});
     }
 
-    user.password = await bcrypt.hash(newpassword,10);
+    user.password = await bcrypt.hash(newPassword,10);
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save();
@@ -190,7 +221,7 @@ exports.resetPassword = async(req,resp)=>{
     resp.status(200).send({message: "Password reset successfully"});
 
   }catch(error){
-    console.log("Reset password error", error);
+    console.error("Reset password error", error);
     resp.status(500).send({message: "Server error"});
   }
 };
