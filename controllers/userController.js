@@ -48,8 +48,13 @@ exports.addUser = async (req, resp) => {
   const { name, email, password } = req.body;
 
   try {
+    
+    if(!name || !email || !password){
+      return resp.status(400).send({message: "Fields cannot be empty"});
+    }
+
     const existingUser = await User.findOne({ email });
-    if (existingUser) return resp.status(400).send({ message: 'Email already exists' });
+    if(existingUser) return resp.status(400).send({ message: 'Email already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -74,6 +79,11 @@ exports.updateUser = async (req, resp) => {
   const { name, email, role } = req.body;
 
   try {
+
+    if(!name && !email && !role){
+      return resp.status(400).send({message: "Fields cannot be empty"});
+    }
+
     const user = await User.findByIdAndUpdate(
       id,
       { name, email ,role},
@@ -93,6 +103,7 @@ exports.deleteUser = async (req, resp) => {
   const { id } = req.params;
 
   try {
+
     const user = await User.findByIdAndDelete(id);
     if (!user) return resp.status(404).send({ message: 'User not found' });
 
